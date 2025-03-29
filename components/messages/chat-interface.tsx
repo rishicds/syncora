@@ -147,6 +147,28 @@ export function ChatInterface({ conversation, messages: initialMessages, current
 
     setIsLoading(true)
 
+    // Optimistically add message to UI immediately
+    const tempId = `temp-${Date.now()}`
+    const tempMessage: Message = {
+      id: tempId,
+      conversation_id: conversation.id,
+      sender_id: currentUser.id,
+      content: newMessage,
+      created_at: new Date().toISOString(),
+      profiles: {
+        id: currentUser.id,
+        full_name: currentUser.user_metadata?.full_name,
+        avatar_url: currentUser.user_metadata?.avatar_url,
+      } as Profile,
+      isNew: true,
+    }
+
+    setMessages((prev) => [...prev, tempMessage])
+    setNewMessage("")
+
+    // Focus back on textarea
+    textareaRef.current?.focus()
+
     try {
       const { data, error } = await supabase
         .from("messages")
@@ -168,8 +190,16 @@ export function ChatInterface({ conversation, messages: initialMessages, current
         })
         .eq("id", conversation.id)
 
-      setNewMessage("")
+      // Replace temp message with real one
+      if (data && data[0]) {
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === tempId ? { ...data[0], profiles: tempMessage.profiles } : msg)),
+        )
+      }
     } catch (error: any) {
+      // Remove temp message on error
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId))
+
       toast({
         title: "Error sending message",
         description: error.message,
@@ -236,7 +266,7 @@ export function ChatInterface({ conversation, messages: initialMessages, current
             <AvatarFallback className="bg-primary/10 text-primary">{getInitials(otherUser)}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">
+            <p className="font-medium text-sm">
               {otherUser.full_name || otherUser.username || otherUser.email || "Unknown User"}
             </p>
             <p className="text-xs text-muted-foreground">Active now</p>
@@ -379,6 +409,7 @@ export function ChatInterface({ conversation, messages: initialMessages, current
             </Button>
           </div>
           <Textarea
+            ref={textareaRef}
             placeholder="Type a message..."
             className="min-h-10 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
             value={newMessage}
