@@ -2,92 +2,165 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Bot, Languages } from "lucide-react"
+import { Bot, Languages, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface MessageActionsProps {
   conversationId: string
-  onSummaryGenerated?: (summary: string) => void
-  onTranslationGenerated?: (translation: string) => void
+  messages: any[]
+  onAIResponseGenerated: (response: string, type: "summary" | "simplified") => void
+  className?: string
 }
 
-export function MessageActions({ conversationId, onSummaryGenerated, onTranslationGenerated }: MessageActionsProps) {
+export function MessageActions({
+  conversationId,
+  messages,
+  onAIResponseGenerated,
+  className = "",
+}: MessageActionsProps) {
   const { toast } = useToast()
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
 
   const handleSummarize = async () => {
+    if (messages.length < 3) {
+      toast({
+        title: "Not enough messages",
+        description: "Need more messages to generate a summary.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSummarizing(true)
 
     try {
-      // In a real implementation, this would call your AI service
-      // For now, we'll simulate a response
-      setTimeout(() => {
-        const aiSummary =
-          "This is an AI-generated summary of the conversation. The participants discussed project requirements, timelines, and next steps."
+      const response = await fetch("/api/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "summarize",
+          messages,
+          conversationId,
+        }),
+      })
 
-        if (onSummaryGenerated) {
-          onSummaryGenerated(aiSummary)
-        }
+      if (!response.ok) {
+        throw new Error("Failed to generate summary")
+      }
 
-        toast({
-          title: "Summary Generated",
-          description: "AI has summarized the conversation.",
-        })
+      const data = await response.json()
+      onAIResponseGenerated(data.result, "summary")
 
-        setIsSummarizing(false)
-      }, 2000)
+      toast({
+        title: "Summary Generated",
+        description: "AI has summarized the conversation.",
+      })
     } catch (error: any) {
       toast({
         title: "Error generating summary",
         description: error.message,
         variant: "destructive",
       })
+    } finally {
       setIsSummarizing(false)
     }
   }
 
   const handleTranslate = async () => {
+    if (messages.length < 1) {
+      toast({
+        title: "Not enough messages",
+        description: "Need more messages to simplify.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsTranslating(true)
 
     try {
-      // In a real implementation, this would call your AI service
-      // For now, we'll simulate a response
-      setTimeout(() => {
-        const translation = "This is a simplified version of the technical discussion in layman's terms."
+      const response = await fetch("/api/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "simplify",
+          messages,
+          conversationId,
+        }),
+      })
 
-        if (onTranslationGenerated) {
-          onTranslationGenerated(translation)
-        }
+      if (!response.ok) {
+        throw new Error("Failed to simplify conversation")
+      }
 
-        toast({
-          title: "Translation Generated",
-          description: "AI has translated technical terms to simpler language.",
-        })
+      const data = await response.json()
+      onAIResponseGenerated(data.result, "simplified")
 
-        setIsTranslating(false)
-      }, 2000)
+      toast({
+        title: "Simplification Complete",
+        description: "AI has simplified the technical terms.",
+      })
     } catch (error: any) {
       toast({
-        title: "Error generating translation",
+        title: "Error simplifying conversation",
         description: error.message,
         variant: "destructive",
       })
+    } finally {
       setIsTranslating(false)
     }
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" onClick={handleSummarize} disabled={isSummarizing}>
-        <Bot className="mr-2 h-4 w-4" />
-        {isSummarizing ? "Summarizing..." : "Summarize"}
-      </Button>
-      <Button variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating}>
-        <Languages className="mr-2 h-4 w-4" />
-        {isTranslating ? "Translating..." : "Simplify"}
-      </Button>
-    </div>
+    <TooltipProvider>
+      <div className={`flex items-center gap-2 ${className}`}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSummarize}
+              disabled={isSummarizing || isTranslating}
+              className="transition-all hover:bg-primary hover:text-primary-foreground"
+            >
+              {isSummarizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+              {isSummarizing ? "Summarizing..." : "Summarize"}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Generate an AI summary of this conversation</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleTranslate}
+              disabled={isSummarizing || isTranslating}
+              className="transition-all hover:bg-primary hover:text-primary-foreground"
+            >
+              {isTranslating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Languages className="mr-2 h-4 w-4" />
+              )}
+              {isTranslating ? "Simplifying..." : "Simplify"}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Translate technical terms into simpler language</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
   )
 }
 

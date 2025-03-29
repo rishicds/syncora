@@ -3,7 +3,12 @@ import { ERROR_CODES } from "@/types/error.types"
 import { handleError } from "@/lib/error-handler"
 
 // Initialize the Gemini API with your API key
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "")
+// Make sure this environment variable is properly set in your .env.local file
+const API_KEY = process.env.GOOGLE_AI_API_KEY
+if (!API_KEY) {
+  console.error("WARNING: Missing GOOGLE_AI_API_KEY environment variable")
+}
+const genAI = new GoogleGenerativeAI(API_KEY || "")
 
 // Safety settings
 const safetySettings = [
@@ -34,9 +39,9 @@ export async function summarizeConversation(messages: any[]) {
     // Format messages for the AI
     const formattedMessages = messages.map((msg) => `${msg.sender_name || "User"}: ${msg.content}`).join("\n")
 
-    // Get the generative model
+    // Get the generative model - using the correct model name "gemini-2.0-flash"
     const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
+      model: "gemini-2.0-flash",
       safetySettings,
     })
 
@@ -50,6 +55,7 @@ export async function summarizeConversation(messages: any[]) {
 
     return text
   } catch (error) {
+    console.error("Raw error summarizing conversation:", error)
     const handledError = handleError(error)
     console.error("Error summarizing conversation:", handledError)
 
@@ -71,9 +77,9 @@ export async function simplifyTechnicalContent(content: string) {
   }
 
   try {
-    // Get the generative model
+    // Get the generative model - using the correct model name "gemini-2.0-flash"
     const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
+      model: "gemini-2.0-flash",
       safetySettings,
     })
 
@@ -87,6 +93,7 @@ export async function simplifyTechnicalContent(content: string) {
 
     return text
   } catch (error) {
+    console.error("Raw error simplifying content:", error)
     const handledError = handleError(error)
     console.error("Error simplifying content:", handledError)
 
@@ -108,9 +115,9 @@ export async function analyzeSentiment(content: string) {
   }
 
   try {
-    // Get the generative model
+    // Get the generative model - using the correct model name "gemini-2.0-flash"
     const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
+      model: "gemini-2.0-flash",
       safetySettings,
     })
 
@@ -127,13 +134,15 @@ export async function analyzeSentiment(content: string) {
     if (jsonMatch) {
       try {
         return JSON.parse(jsonMatch[0])
-      } catch {
+      } catch (e) {
+        console.error("Failed to parse JSON:", e)
         return { sentiment: "neutral", urgency: "low" }
       }
     }
 
     return { sentiment: "neutral", urgency: "low" }
   } catch (error) {
+    console.error("Raw error analyzing sentiment:", error)
     const handledError = handleError(error)
     console.error("Error analyzing sentiment:", handledError)
     return { sentiment: "neutral", urgency: "low" }
@@ -146,9 +155,9 @@ export async function generateAIResponse(prompt: string, context?: string) {
   }
 
   try {
-    // Get the generative model
+    // Get the generative model - using the correct model name "gemini-2.0-flash"
     const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
+      model: "gemini-2.0-flash",
       safetySettings,
     })
 
@@ -162,6 +171,7 @@ export async function generateAIResponse(prompt: string, context?: string) {
 
     return text
   } catch (error) {
+    console.error("Raw error generating AI response:", error)
     const handledError = handleError(error)
     console.error("Error generating AI response:", handledError)
 
@@ -176,4 +186,3 @@ export async function generateAIResponse(prompt: string, context?: string) {
     return "Failed to generate a response. Please try again."
   }
 }
-

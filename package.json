@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.2.3",
     "@emoji-mart/data": "latest",
     "@emoji-mart/react": "latest",
     "@google/generative-ai": "latest",
@@ -43,6 +44,7 @@
     "@supabase/auth-helpers-nextjs": "latest",
     "@supabase/supabase-js": "latest",
     "@tailwindcss/postcss": "^4.0.17",
+    "ai": "^4.2.8",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

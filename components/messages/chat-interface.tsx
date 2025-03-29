@@ -9,7 +9,9 @@ import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useSupabase } from "@/components/supabase-provider"
-import { ArrowLeft, Info, MoreVertical, Send, Smile, Paperclip, Bot } from "lucide-react"
+import { ArrowLeft, Info, MoreVertical, Send, Smile, Paperclip, Bot, ImageIcon, Mic } from "lucide-react"
+import { MessageActions } from "./message-actions"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface Profile {
   id: string
@@ -26,6 +28,8 @@ interface Message {
   content: string
   created_at: string
   profiles: Profile
+  is_ai?: boolean
+  ai_type?: "summary" | "simplified"
 }
 
 interface Conversation {
@@ -34,11 +38,8 @@ interface Conversation {
   user2_id: string
   created_at: string
   updated_at: string
-  otherUserProfile: Profile  // Add this
+  otherUserProfile: Profile
 }
-
-// Modify the otherUser logic in the component
-
 
 interface ChatInterfaceProps {
   conversation: Conversation
@@ -53,22 +54,23 @@ export function ChatInterface({ conversation, messages: initialMessages, current
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [newMessage, setNewMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isSummarizing, setIsSummarizing] = useState(false)
+  const [showActionsForMessage, setShowActionsForMessage] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   // Get the other user in the conversation with robust error handling
   const otherUser = conversation.otherUserProfile || {
-    id: 'unknown',
-    username: 'Unknown User',
-    full_name: 'Unknown User',
-    avatar_url: '/default-avatar.svg',
-    email: 'unknown@example.com'
+    id: "unknown",
+    username: "Unknown User",
+    full_name: "Unknown User",
+    avatar_url: "/placeholder.svg?height=32&width=32",
+    email: "unknown@example.com",
   }
 
   // Get initials from name or email with robust fallback
-  const  getInitials = (profile?: Profile) => {
+  const getInitials = (profile?: Profile) => {
     if (!profile) return "U"
-    
+
     if (profile.full_name) {
       return profile.full_name
         .split(" ")
@@ -76,16 +78,16 @@ export function ChatInterface({ conversation, messages: initialMessages, current
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    } 
-    
+    }
+
     if (profile.email) {
       return profile.email?.substring(0, 2).toUpperCase()
     }
-    
+
     if (profile.username) {
       return profile.username.substring(0, 2).toUpperCase()
     }
-    
+
     return "U"
   }
 
@@ -126,6 +128,20 @@ export function ChatInterface({ conversation, messages: initialMessages, current
     }
   }, [supabase, conversation.id])
 
+  // Handle click outside to hide message actions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (messagesContainerRef.current && !messagesContainerRef.current.contains(event.target as Node)) {
+        setShowActionsForMessage(null)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return
 
@@ -164,154 +180,207 @@ export function ChatInterface({ conversation, messages: initialMessages, current
     }
   }
 
-  const handleSummarize = async () => {
-    if (messages.length < 3) {
-      toast({
-        title: "Not enough messages",
-        description: "Need more messages to generate a summary.",
-        variant: "destructive",
-      })
-      return
-    }
+  const handleAIResponse = (response: string, type: "summary" | "simplified") => {
+    // Add the AI response as a special message
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `ai-${type}-${Date.now()}`,
+        conversation_id: conversation.id,
+        sender_id: "ai-assistant",
+        content: response,
+        created_at: new Date().toISOString(),
+        profiles: {
+          id: "ai-assistant",
+          full_name: type === "summary" ? "AI Summary" : "AI Simplification",
+        } as Profile,
+        is_ai: true,
+        ai_type: type,
+      } as Message,
+    ])
+  }
 
-    setIsSummarizing(true)
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
 
-    try {
-      // In a real implementation, this would call your AI service
-      // For now, we'll simulate a response
-      setTimeout(() => {
-        const aiSummary =
-          "This is an AI-generated summary of the conversation. The participants discussed project requirements, timelines, and next steps. Key points include setting up a meeting next week and sharing documentation."
+  const getMessageGroupDate = (index: number) => {
+    if (index === 0) return new Date(messages[0].created_at).toLocaleDateString()
 
-        // Add the AI summary as a special message
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `ai-summary-${Date.now()}`,
-            conversation_id: conversation.id,
-            sender_id: "ai-assistant",
-            content: aiSummary,
-            created_at: new Date().toISOString(),
-            profiles: {
-              id: "ai-assistant",
-              full_name: "AI Assistant",
-            } as Profile,
-          } as Message,
-        ])
+    const currentDate = new Date(messages[index].created_at).toLocaleDateString()
+    const prevDate = new Date(messages[index - 1].created_at).toLocaleDateString()
 
-        setIsSummarizing(false)
-      }, 2000)
-    } catch (error: any) {
-      toast({
-        title: "Error generating summary",
-        description: error.message,
-        variant: "destructive",
-      })
-      setIsSummarizing(false)
-    }
+    if (currentDate !== prevDate) return currentDate
+    return null
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b p-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/messages")}>
+    <div className="flex h-full flex-col bg-background">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b p-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/dashboard/messages")}
+            className="rounded-full"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Avatar className="h-8 w-8">
-  <AvatarImage src={otherUser.avatar_url || "/placeholder.svg?height=32&width=32"} />
-  <AvatarFallback>{getInitials(otherUser)}</AvatarFallback>
-</Avatar>
-<div>
-  <p className="font-medium">
-    {otherUser.full_name || otherUser.username || otherUser.email || "Unknown User"}
-  </p>
-</div>
+          <Avatar className="h-10 w-10 border-2 border-primary/10">
+            <AvatarImage src={otherUser.avatar_url || "/placeholder.svg?height=40&width=40"} />
+            <AvatarFallback className="bg-primary/10 text-primary">{getInitials(otherUser)}</AvatarFallback>
+          </Avatar>
           <div>
             <p className="font-medium">
               {otherUser.full_name || otherUser.username || otherUser.email || "Unknown User"}
             </p>
+            <p className="text-xs text-muted-foreground">Active now</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={handleSummarize} disabled={isSummarizing}>
-            <Bot className="h-5 w-5" />
-            <span className="sr-only">AI Summary</span>
-          </Button>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="rounded-full">
             <Info className="h-5 w-5" />
-            <span className="sr-only">Info</span>
           </Button>
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-5 w-5" />
-            <span className="sr-only">More</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>View Profile</DropdownMenuItem>
+              <DropdownMenuItem>Search in Conversation</DropdownMenuItem>
+              <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive">Block User</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
-        <div className="space-y-4">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-muted-foreground">No messages yet</p>
-              <p className="text-sm text-muted-foreground">Send a message to start the conversation</p>
-            </div>
-          ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.sender_id === currentUser.id ? "justify-end" : "justify-start"}`}
-              >
-                <div className="flex max-w-[80%] gap-2">
-                  {message.sender_id !== currentUser.id && message.sender_id !== "ai-assistant" && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={message.profiles?.avatar_url || "/placeholder.svg?height=32&width=32"} />
-                      <AvatarFallback>{getInitials(message.profiles)}</AvatarFallback>
-                    </Avatar>
+      {/* Messages */}
+      <div className="flex-1 overflow-auto p-4 space-y-4" ref={messagesContainerRef}>
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Bot className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No messages yet</p>
+            <p className="text-sm text-muted-foreground">Send a message to start the conversation</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {messages.map((message, index) => {
+              const dateHeader = getMessageGroupDate(index)
+              const isCurrentUser = message.sender_id === currentUser.id
+              const isAI = message.is_ai || message.sender_id === "ai-assistant"
+
+              return (
+                <div key={message.id} className="space-y-4">
+                  {dateHeader && (
+                    <div className="flex justify-center my-4">
+                      <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">{dateHeader}</div>
+                    </div>
                   )}
 
-                  {message.sender_id === "ai-assistant" && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback>
-                    </Avatar>
-                  )}
+                  <div
+                    className={`group relative flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
+                    onMouseEnter={() => !isAI && setShowActionsForMessage(message.id)}
+                    onMouseLeave={() => setShowActionsForMessage(null)}
+                  >
+                    <div className="flex max-w-[80%] gap-2">
+                      {!isCurrentUser && !isAI && (
+                        <Avatar className="h-8 w-8 mt-1">
+                          <AvatarImage src={message.profiles?.avatar_url || "/placeholder.svg?height=32&width=32"} />
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {getInitials(message.profiles)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
 
-                  <div>
-                    <Card
-                      className={`p-3 ${
-                        message.sender_id === currentUser.id
-                          ? "bg-primary text-primary-foreground"
-                          : message.sender_id === "ai-assistant"
-                            ? "bg-secondary text-secondary-foreground"
-                            : ""
-                      }`}
-                    >
-                      <p className="text-sm">{message.content}</p>
-                    </Card>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {new Date(message.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                      {isAI && (
+                        <Avatar className="h-8 w-8 mt-1">
+                          <AvatarFallback className="bg-secondary text-secondary-foreground">AI</AvatarFallback>
+                        </Avatar>
+                      )}
+
+                      <div>
+                        <Card
+                          className={`p-3 ${
+                            isCurrentUser
+                              ? "bg-primary text-primary-foreground"
+                              : isAI
+                                ? "bg-secondary border-secondary text-secondary-foreground"
+                                : "bg-muted"
+                          } ${
+                            message.ai_type === "summary"
+                              ? "border-l-4 border-l-yellow-500"
+                              : message.ai_type === "simplified"
+                                ? "border-l-4 border-l-blue-500"
+                                : ""
+                          }`}
+                        >
+                          {isAI && (
+                            <div className="text-xs font-medium mb-1">
+                              {message.profiles?.full_name || "AI Assistant"}
+                            </div>
+                          )}
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        </Card>
+                        <p className="mt-1 text-xs text-muted-foreground">{formatDate(message.created_at)}</p>
+                      </div>
+
+                      {isCurrentUser && (
+                        <Avatar className="h-8 w-8 mt-1">
+                          <AvatarImage
+                            src={currentUser.user_metadata?.avatar_url || "/placeholder.svg?height=32&width=32"}
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {currentUser.user_metadata?.full_name?.substring(0, 2).toUpperCase() || "ME"}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
+
+                    {/* AI Actions that appear on hover */}
+                    {showActionsForMessage === message.id && !isAI && (
+                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MessageActions
+                          conversationId={conversation.id}
+                          messages={messages.slice(0, index + 1)}
+                          onAIResponseGenerated={handleAIResponse}
+                          className="bg-background shadow-md rounded-full p-1"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+              )
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
-      <div className="border-t p-4">
-        <div className="flex items-end gap-2">
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <Paperclip className="h-5 w-5" />
-            <span className="sr-only">Attach</span>
-          </Button>
+      {/* Input Area */}
+      <div className="border-t p-3">
+        <div className="flex items-end gap-2 bg-muted p-2 rounded-lg">
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+              <Paperclip className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+              <ImageIcon className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+              <Mic className="h-5 w-5" />
+            </Button>
+          </div>
           <Textarea
             placeholder="Type a message..."
-            className="min-h-10 resize-none"
+            className="min-h-10 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => {
@@ -321,21 +390,22 @@ export function ChatInterface({ conversation, messages: initialMessages, current
               }
             }}
           />
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <Smile className="h-5 w-5" />
-            <span className="sr-only">Emoji</span>
-          </Button>
-          <Button
-            size="icon"
-            className="shrink-0"
-            onClick={handleSendMessage}
-            disabled={isLoading || !newMessage.trim()}
-          >
-            <Send className="h-5 w-5" />
-            <span className="sr-only">Send</span>
-          </Button>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+              <Smile className="h-5 w-5" />
+            </Button>
+            <Button
+              size="icon"
+              className={`rounded-full h-9 w-9 ${newMessage.trim() ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"}`}
+              onClick={handleSendMessage}
+              disabled={isLoading || !newMessage.trim()}
+            >
+              <Send className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
+
