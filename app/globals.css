@@ -82,3 +82,30 @@
 
 
 
+/* Custom Scrollbar for Sidebar */
+.sidebar-morphic nav::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sidebar-morphic nav::-webkit-scrollbar-track {
+  background: rgba(15, 15, 20, 0.5); /* Dark background matching your sidebar */
+  border-radius: 10px;
+  margin: 8px 0;
+}
+
+.sidebar-morphic nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3); /* Semi-transparent white */
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.sidebar-morphic nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5); /* Brighter white on hover */
+}
+
+/* For Firefox */
+.sidebar-morphic nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(15, 15, 20, 0.5);
+}

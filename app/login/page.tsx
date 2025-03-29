@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -14,33 +16,15 @@ export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { supabase } = useSupabase()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  
-  // Separate state for each form type to avoid issues with shared state
-  const [formData, setFormData] = useState({
-    signin: { email: "", password: "" },
-    signup: { email: "", password: "" },
-    magic: { email: "" }
-  })
-  
-  // Update form data based on the active tab
-  const updateFormData = (tab: keyof typeof formData, field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [tab]: {
-        ...prev[tab],
-        [field]: value
-      }
-    }))
-  }
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const { email, password } = formData.signin
-      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -70,8 +54,6 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { email, password } = formData.signup
-      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -102,8 +84,6 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { email } = formData.magic
-      
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -151,22 +131,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4 md:p-8">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold tracking-tight">Syncora</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            Sign in to your account to continue
-          </CardDescription>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Syncora</CardTitle>
+          <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6">
-            <Button 
-              variant="outline" 
-              onClick={() => handleOAuthSignIn("github")} 
-              disabled={loading} 
-              className="w-full flex items-center justify-center"
-            >
+          <div className="grid gap-4">
+            <Button variant="outline" onClick={() => handleOAuthSignIn("github")} disabled={loading} className="w-full">
               <Github className="mr-2 h-4 w-4" />
               Continue with GitHub
             </Button>
@@ -176,37 +149,35 @@ export default function LoginPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
 
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
                 <TabsTrigger value="magic">Magic Link</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signin" className="mt-0">
+              <TabsContent value="signin">
                 <form onSubmit={handleEmailSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Input
-                      id="signin-email"
+                      id="email"
                       placeholder="Email"
                       type="email"
-                      value={formData.signin.email}
-                      onChange={(e) => updateFormData("signin", "email", e.target.value)}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full"
                     />
                     <Input
-                      id="signin-password"
+                      id="password"
                       placeholder="Password"
                       type="password"
-                      value={formData.signin.password}
-                      onChange={(e) => updateFormData("signin", "password", e.target.value)}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full"
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
@@ -215,26 +186,24 @@ export default function LoginPage() {
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup" className="mt-0">
+              <TabsContent value="signup">
                 <form onSubmit={handleEmailSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Input
-                      id="signup-email"
+                      id="email"
                       placeholder="Email"
                       type="email"
-                      value={formData.signup.email}
-                      onChange={(e) => updateFormData("signup", "email", e.target.value)}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full"
                     />
                     <Input
-                      id="signup-password"
+                      id="password"
                       placeholder="Password"
                       type="password"
-                      value={formData.signup.password}
-                      onChange={(e) => updateFormData("signup", "password", e.target.value)}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full"
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
@@ -243,17 +212,16 @@ export default function LoginPage() {
                 </form>
               </TabsContent>
 
-              <TabsContent value="magic" className="mt-0">
+              <TabsContent value="magic">
                 <form onSubmit={handleMagicLink} className="space-y-4">
                   <div className="space-y-2">
                     <Input
-                      id="magic-email"
+                      id="email"
                       placeholder="Email"
                       type="email"
-                      value={formData.magic.email}
-                      onChange={(e) => updateFormData("magic", "email", e.target.value)}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full"
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>

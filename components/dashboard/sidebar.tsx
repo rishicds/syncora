@@ -3,39 +3,8 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  Home,
-  MessageSquare,
-  Search,
-  Settings,
-  User,
-  Bell,
-  FileText,
-  Menu,
-  Hash,
-  Plus,
-  ChevronDown,
-  Mic,
-  Megaphone,
-  Loader2,
-} from "lucide-react"
+import { Home, MessageSquare, Search, Settings, User, Bell, FileText, Hash, Plus, Mic, Megaphone, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
-} from "@/components/ui/sidebar"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useSupabase } from "@/components/supabase-provider"
 import { type Group, CHANNEL_TYPES } from "@/types/group.types"
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog"
@@ -55,296 +24,225 @@ export function DashboardSidebar() {
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
-  const [isCollapsed, setIsCollapsed] = useState(false)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
 
+  // Navigation routes
   const routes = [
-    {
-      title: "Dashboard",
-      icon: Home,
-      href: "/dashboard",
-      active: pathname === "/dashboard",
-    },
-    {
-      title: "Direct Messages",
-      icon: MessageSquare,
-      href: "/dashboard/messages",
-      active: pathname.startsWith("/dashboard/messages") && !pathname.includes("/groups"),
-    },
-    {
-      title: "Search Users",
-      icon: Search,
-      href: "/dashboard/search",
-      active: pathname === "/dashboard/search",
-    },
-    {
-      title: "Notifications",
-      icon: Bell,
-      href: "/dashboard/notifications",
-      active: pathname === "/dashboard/notifications",
-      badge: unreadNotifications > 0 ? unreadNotifications : undefined,
-    },
-    {
-      title: "Files",
-      icon: FileText,
-      href: "/dashboard/files",
-      active: pathname === "/dashboard/files",
-    },
-    {
-      title: "Profile",
-      icon: User,
-      href: "/dashboard/profile",
-      active: pathname === "/dashboard/profile",
-    },
-    {
-      title: "Settings",
-      icon: Settings,
-      href: "/dashboard/settings",
-      active: pathname === "/dashboard/settings",
-    },
+    { title: "Dashboard", icon: Home, href: "/dashboard", active: pathname === "/dashboard" },
+    { title: "Messages", icon: MessageSquare, href: "/dashboard/messages", active: pathname.startsWith("/dashboard/messages") && !pathname.includes("/groups") },
+    { title: "Search", icon: Search, href: "/dashboard/search", active: pathname === "/dashboard/search" },
+    { title: "Notifications", icon: Bell, href: "/dashboard/notifications", active: pathname === "/dashboard/notifications", badge: unreadNotifications },
+    { title: "Files", icon: FileText, href: "/dashboard/files", active: pathname === "/dashboard/files" },
+    { title: "Profile", icon: User, href: "/dashboard/profile", active: pathname === "/dashboard/profile" },
+    { title: "Settings", icon: Settings, href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
   ]
 
+  // Fetch groups and notifications
   useEffect(() => {
-    async function fetchGroups() {
+    const fetchData = async () => {
       try {
-        const { data: userData } = await supabase.auth.getUser()
-        if (!userData.user) return
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
 
-        // Fetch groups the user is a member of
-        const { data: memberData } = await supabase
-          .from("group_members")
-          .select("group_id, role_ids")
-          .eq("user_id", userData.user.id)
+        // Fetch groups
+        const { data: groupsData } = await supabase
+          .from("groups")
+          .select("*, channels(*), group_members!inner(role_ids), roles(*)")
+          .eq("group_members.user_id", user.id)
 
-        if (!memberData || memberData.length === 0) {
-          setLoading(false)
-          return
-        }
+        setGroups(groupsData || [])
 
-        const groupIds = memberData.map((m) => m.group_id)
-
-        // Fetch group details
-        const { data: groupsData } = await supabase.from("groups").select("*, channels(*)").in("id", groupIds)
-
-        if (groupsData) {
-          // Fetch roles for each group
-          const { data: rolesData } = await supabase.from("roles").select("*").in("group_id", groupIds)
-
-          // Combine data
-          const groupsWithRoles = groupsData.map((group) => {
-            const groupRoles = rolesData?.filter((role) => role.group_id === group.id) || []
-            const memberRoleIds = memberData.find((m) => m.group_id === group.id)?.role_ids || []
-
-            return {
-              ...group,
-              roles: groupRoles,
-              userRoleIds: memberRoleIds,
-            }
-          })
-
-          setGroups(groupsWithRoles)
-        }
-
-        // Fetch unread notification count
-        const count = await getUnreadNotificationCount(userData.user.id)
+        // Fetch notifications
+        const count = await getUnreadNotificationCount(user.id)
         setUnreadNotifications(count)
       } catch (error) {
-        const handledError = handleError(error)
         toast({
-          title: "Error fetching groups",
-          description: handledError.message,
-          variant: "destructive",
+          title: "Error loading data",
+          description: handleError(error).message,
+          variant: "destructive"
         })
       } finally {
         setLoading(false)
       }
     }
 
-    fetchGroups()
+    fetchData()
 
-    // Set up real-time subscription for notifications
-    const setupNotificationSubscription = async () => {
-      const { data: userData } = await supabase.auth.getUser()
-      if (!userData.user) return
-
-      const channel = supabase
-        .channel(`notifications:${userData.user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${userData.user.id}`,
-          },
-          async () => {
-            // Update notification count
-            const count = await getUnreadNotificationCount(userData.user.id)
-            setUnreadNotifications(count)
-          },
-        )
-        .subscribe()
-
-      return () => {
-        supabase.removeChannel(channel)
-      }
-    }
-
-    const unsubscribe = setupNotificationSubscription()
+    // Real-time subscription for notifications
+    const channel = supabase
+      .channel('notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user) getUnreadNotificationCount(user.id).then(setUnreadNotifications)
+        })
+      })
+      .subscribe()
 
     return () => {
-      unsubscribe.then((unsub) => unsub && unsub())
+      supabase.removeChannel(channel)
     }
   }, [supabase, toast])
 
-  const getChannelIcon = (type: string) => {
-    switch (type) {
-      case CHANNEL_TYPES.TEXT:
-        return <Hash className="h-4 w-4" />
-      case CHANNEL_TYPES.VOICE:
-        return <Mic className="h-4 w-4" />
-      case CHANNEL_TYPES.ANNOUNCEMENT:
-        return <Megaphone className="h-4 w-4" />
-      default:
-        return <Hash className="h-4 w-4" />
-    }
+  // Check channel creation permissions
+  const canCreateChannel = (group: Group): boolean => {
+    if (!group.roles || !group.group_members?.[0]?.role_ids) return false
+    
+    return group.roles
+      .filter(role => group.group_members[0].role_ids.includes(role.id))
+      .some(role => hasPermission(role.permissions, "MANAGE_CHANNELS"))
   }
 
-  const canCreateChannel = (group: Group) => {
-    if (!group.roles || !group.userRoleIds) return false
-
-    const userRoles = group.roles.filter((role) => group.userRoleIds?.includes(role.id))
-
-    return userRoles.some((role) => hasPermission(role.permissions, "MANAGE_CHANNELS"))
+  // Get appropriate channel icon
+  const getChannelIcon = (type: string) => {
+    switch (type) {
+      case CHANNEL_TYPES.TEXT: return <Hash className="h-4 w-4" />
+      case CHANNEL_TYPES.VOICE: return <Mic className="h-4 w-4" />
+      case CHANNEL_TYPES.ANNOUNCEMENT: return <Megaphone className="h-4 w-4" />
+      default: return <Hash className="h-4 w-4" />
+    }
   }
 
   return (
     <>
-      <Sidebar variant="responsive" isCollapsed={isCollapsed}>
-        <SidebarHeader className="flex items-center justify-between px-4 py-2">
+      <aside className="fixed inset-y-0 z-50 flex h-screen w-64 flex-col border-r border-white/10 bg-gradient-to-b from-gray-900/80 to-gray-800/80 backdrop-blur-lg">
+        {/* Header */}
+        <header className="flex items-center justify-between p-4">
           <Link href="/dashboard" className="flex items-center gap-2">
-            {!isCollapsed && <span className="text-xl font-bold">Syncora</span>}
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Syncora
+            </span>
           </Link>
-          <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="md:hidden">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle sidebar</span>
-          </Button>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {routes.map((route) => (
-              <SidebarMenuItem key={route.href}>
-                <SidebarMenuButton asChild isActive={route.active}>
-                  <Link href={route.href} className="relative">
-                    <route.icon className="h-5 w-5" />
-                    {!isCollapsed && <span>{route.title}</span>}
-                    {route.badge && (
-                      <Badge
-                        variant="destructive"
-                        className="absolute -right-2 -top-2 h-5 w-5 p-0 flex items-center justify-center"
-                      >
-                        {route.badge}
-                      </Badge>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
+        </header>
 
-          <SidebarGroup>
-            <div className="flex items-center justify-between px-2 py-2">
-              {!isCollapsed && <SidebarGroupLabel>Groups</SidebarGroupLabel>}
-              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setShowCreateGroup(true)}>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-1">
+            {routes.map(route => (
+              <Link
+                key={route.href}
+                href={route.href}
+                className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                  route.active 
+                    ? "bg-primary/10 text-white shadow-lg" 
+                    : "text-gray-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${
+                  route.active 
+                    ? "bg-primary/20 text-primary" 
+                    : "bg-white/5 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary"
+                }`}>
+                  <route.icon className="h-4 w-4" />
+                </div>
+                <span>{route.title}</span>
+                {route.badge ? (
+                  <Badge className="ml-auto bg-primary text-primary-foreground">
+                    {route.badge}
+                  </Badge>
+                ) : null}
+              </Link>
+            ))}
+          </div>
+
+          {/* Groups section */}
+          <div className="mt-8">
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Groups</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 rounded-lg bg-white/5 p-0 hover:bg-primary/10 hover:text-primary"
+                onClick={() => setShowCreateGroup(true)}
+              >
                 <Plus className="h-4 w-4" />
-                <span className="sr-only">Create Group</span>
               </Button>
             </div>
-            <SidebarGroupContent>
-              {loading ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : groups.length === 0 ? (
-                <div className="px-2 py-1 text-sm text-muted-foreground">{!isCollapsed && "No groups yet"}</div>
-              ) : (
-                <SidebarMenu>
-                  {groups.map((group) => (
-                    <Collapsible key={group.id} defaultOpen className="group/collapsible">
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton>
-                            <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
-                              {group.name.charAt(0).toUpperCase()}
+
+            {loading ? (
+              <div className="space-y-2 py-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-2">
+                    <div className="h-8 w-8 rounded-lg bg-gray-700/50 animate-pulse" />
+                    <div className="h-4 flex-1 rounded bg-gray-700/50 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : groups.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-400">No groups yet</div>
+            ) : (
+              <div className="space-y-2 py-2">
+                {groups.map(group => (
+                  <div key={group.id} className="group">
+                    <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-white/5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/20 text-secondary">
+                        {group.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-sm font-medium text-gray-300">{group.name}</span>
+                    </div>
+                    
+                    <div className="ml-12 mt-1 space-y-1">
+                      {group.channels?.length ? (
+                        group.channels.map(channel => (
+                          <Link
+                            key={channel.id}
+                            href={`/dashboard/groups/${group.id}/channels/${channel.id}`}
+                            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all ${
+                              pathname === `/dashboard/groups/${group.id}/channels/${channel.id}`
+                                ? "bg-primary/10 text-primary"
+                                : "text-gray-400 hover:bg-white/5 hover:text-white"
+                            }`}
+                          >
+                            <div className="flex h-5 w-5 items-center justify-center rounded-md bg-white/5">
+                              {getChannelIcon(channel.type)}
                             </div>
-                            {!isCollapsed && (
-                              <>
-                                <span>{group.name}</span>
-                                <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                              </>
-                            )}
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {group.channels && group.channels.length > 0 ? (
-                              <>
-                                {group.channels.map((channel) => (
-                                  <SidebarMenuSubItem key={channel.id}>
-                                    <SidebarMenuSubButton
-                                      asChild
-                                      isActive={pathname === `/dashboard/groups/${group.id}/channels/${channel.id}`}
-                                    >
-                                      <Link href={`/dashboard/groups/${group.id}/channels/${channel.id}`}>
-                                        {getChannelIcon(channel.type)}
-                                        {!isCollapsed && <span>{channel.name}</span>}
-                                      </Link>
-                                    </SidebarMenuSubButton>
-                                  </SidebarMenuSubItem>
-                                ))}
-                              </>
-                            ) : (
-                              <div className="px-2 py-1 text-xs text-muted-foreground">
-                                {!isCollapsed && "No channels"}
-                              </div>
-                            )}
+                            <span>{channel.name}</span>
+                          </Link>
+                        ))
+                      ) : (
+                        <div className="px-3 py-1 text-xs text-gray-500">No channels</div>
+                      )}
 
-                            {canCreateChannel(group) && (
-                              <SidebarMenuSubItem>
-                                <SidebarMenuSubButton
-                                  asChild
-                                  onClick={() => {
-                                    setSelectedGroupId(group.id)
-                                    setShowCreateChannel(true)
-                                  }}
-                                >
-                                  <div className="flex items-center text-muted-foreground hover:text-foreground cursor-pointer">
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    {!isCollapsed && <span>Add Channel</span>}
-                                  </div>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            )}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  ))}
-                </SidebarMenu>
-              )}
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <div className="p-2">{!isCollapsed && <p className="text-xs text-muted-foreground">Syncora v0.2.0</p>}</div>
-        </SidebarFooter>
-      </Sidebar>
+                      {canCreateChannel(group) && (
+                        <button
+                          onClick={() => {
+                            setSelectedGroupId(group.id)
+                            setShowCreateChannel(true)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white"
+                        >
+                          <div className="flex h-5 w-5 items-center justify-center rounded-md bg-white/5">
+                            <Plus className="h-3 w-3" />
+                          </div>
+                          <span>Add Channel</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </nav>
 
+        {/* Footer */}
+        <footer className="border-t border-white/10 p-4">
+          <p className="text-xs text-gray-400">
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text font-bold text-transparent">
+              Syncora
+            </span> v0.2.0
+          </p>
+        </footer>
+      </aside>
+
+      {/* Dialogs */}
       <CreateGroupDialog
         open={showCreateGroup}
         onOpenChange={setShowCreateGroup}
         onGroupCreated={(newGroup) => {
-          setGroups((prev) => [...prev, newGroup])
+          setGroups(prev => [...prev, newGroup])
         }}
       />
 
@@ -354,21 +252,14 @@ export function DashboardSidebar() {
           onOpenChange={setShowCreateChannel}
           groupId={selectedGroupId}
           onChannelCreated={(newChannel) => {
-            setGroups((prev) =>
-              prev.map((group) => {
-                if (group.id === selectedGroupId) {
-                  return {
-                    ...group,
-                    channels: [...(group.channels || []), newChannel],
-                  }
-                }
-                return group
-              }),
-            )
+            setGroups(prev => prev.map(group => 
+              group.id === selectedGroupId 
+                ? { ...group, channels: [...(group.channels || []), newChannel] } 
+                : group
+            ))
           }}
         />
       )}
     </>
   )
 }
-
