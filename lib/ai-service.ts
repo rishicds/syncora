@@ -8,7 +8,7 @@ const API_KEY = process.env.GOOGLE_AI_API_KEY
 if (!API_KEY) {
   console.error("WARNING: Missing GOOGLE_AI_API_KEY environment variable")
 }
-const genAI = new GoogleGenerativeAI(API_KEY || "")
+const genAI = new GoogleGenerativeAI(API_KEY ?? process.env.GOOGLE_AI_API_KEY ?? "")
 
 // Safety settings
 const safetySettings = [
