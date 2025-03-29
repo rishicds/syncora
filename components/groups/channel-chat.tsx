@@ -38,7 +38,6 @@ import { hasPermission } from "@/lib/permissions"
 import { uploadFile, type UploadedFile } from "@/lib/file-service"
 import { handleError } from "@/lib/error-handler"
 
-
 interface ChannelChatProps {
   channel: Channel
   group: Group & { roles: Role[] }
@@ -61,7 +60,6 @@ export function ChannelChat({ channel, group, messages: initialMessages, members
   const [uploadProgress, setUploadProgress] = useState(0)
   const [showFileUpload, setShowFileUpload] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  
 
   // Get current user's roles in this group
   const currentMember = members.find((m) => m.user_id === currentUser.id)
@@ -634,9 +632,19 @@ export function ChannelChat({ channel, group, messages: initialMessages, members
         </div>
       </div>
 
-      {showMembers && <ChannelMembers groupId={group?.id} members={members} roles={group.roles} onClose={() => setShowMembers(false)} currentUserId={""} refetchMembers={function (): void {
-        throw new Error("Function not implemented.")
-      } } />}
+      {showMembers && (
+        <ChannelMembers
+          groupId={group.id}
+          members={members}
+          roles={group.roles}
+          onClose={() => setShowMembers(false)}
+          currentUserId={currentUser.id}
+          refetchMembers={(): void => {
+            // This would typically fetch the latest members data
+            router.refresh()
+          }}
+        />
+      )}
     </div>
   )
 }
