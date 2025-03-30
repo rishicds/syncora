@@ -24,11 +24,12 @@ import {
   Paperclip,
   FileScanIcon as FileAnalytics,
   Users,
+  AlertCircle,
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { Badge } from "../ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
@@ -85,14 +86,17 @@ export default function ChannelView({
   const [fileAttachments, setFileAttachments] = useState<FileAttachment[]>([])
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploading, setUploading] = useState(false)
+  const [autoAnalysisRunning, setAutoAnalysisRunning] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const sentimentAnalysisIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const lastAnalyzedMessagesRef = useRef<Set<string>>(new Set())
 
   const canSendMessages = userRoles.length > 0
 
-  // Function to analyze sentiment using Gemini API (only when requested)
-  const analyzeSentimentWithGemini = async (messageId: string, content: string) => {
+  // Function to analyze sentiment using AI SDK
+  const analyzeSentimentWithAI = async (messageId: string, content: string) => {
     try {
       const response = await fetch("/api/ai", {
         method: "POST",
@@ -125,8 +129,8 @@ export default function ChannelView({
     }
   }
 
-  // Function to analyze file content using Gemini API
-  const analyzeFileWithGemini = async (fileId: string, content: string, fileName: string) => {
+  // Function to analyze file content using AI SDK
+  const analyzeFileWithAI = async (fileId: string, content: string, fileName: string) => {
     try {
       setFileAttachments((prev) => prev.map((file) => (file.id === fileId ? { ...file, analyzing: true } : file)))
 
@@ -163,8 +167,8 @@ export default function ChannelView({
     }
   }
 
-  // Function to simplify text using Gemini API
-  const simplifyTextWithGemini = async (content: string): Promise<string> => {
+  // Function to simplify text using AI SDK
+  const simplifyTextWithAI = async (content: string): Promise<string> => {
     try {
       const response = await fetch("/api/ai", {
         method: "POST",
@@ -187,8 +191,8 @@ export default function ChannelView({
     }
   }
 
-  // Function to summarize conversation using Gemini API
-  const summarizeConversationWithGemini = async (messages: any[]): Promise<string> => {
+  // Function to summarize conversation using AI SDK
+  const summarizeConversationWithAI = async (messages: any[]): Promise<string> => {
     try {
       // Format messages for the API
       const formattedConversation = messages
@@ -217,6 +221,54 @@ export default function ChannelView({
     } catch (error) {
       console.error("Error summarizing conversation:", error)
       throw error
+    }
+  }
+
+  // Function to run automatic sentiment analysis on all messages
+  const runAutomaticSentimentAnalysis = async () => {
+    if (autoAnalysisRunning || messages.length === 0) return
+
+    setAutoAnalysisRunning(true)
+
+    try {
+      // Get messages that haven't been analyzed yet
+      const unanalyzedMessages = messages.filter(
+        (msg) => !messageSentiments[msg.id] && !lastAnalyzedMessagesRef.current.has(msg.id),
+      )
+
+      if (unanalyzedMessages.length === 0) {
+        setAutoAnalysisRunning(false)
+        return
+      }
+
+      // Process each unanalyzed message
+      for (const msg of unanalyzedMessages) {
+        // Add to set of analyzed messages to avoid reprocessing
+        lastAnalyzedMessagesRef.current.add(msg.id)
+
+        // Analyze sentiment
+        await analyzeSentimentWithAI(msg.id, msg.content)
+
+        // Check if message is longer than 5 words and suggest simplification
+        const wordCount = msg.content.split(/\s+/).length
+        if (wordCount > 5) {
+          // Show a suggestion toast for longer messages
+          toast({
+            title: "Message could be simplified",
+            description: "This message contains technical language. Click the sparkle icon to simplify it.",
+            action: (
+              <Button variant="outline" size="sm" onClick={() => handleSimplifyMessage(msg.id, msg.content)}>
+                <Sparkles className="h-3.5 w-3.5 mr-2" />
+                Simplify
+              </Button>
+            ),
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Error in automatic sentiment analysis:", error)
+    } finally {
+      setAutoAnalysisRunning(false)
     }
   }
 
@@ -294,18 +346,26 @@ export default function ChannelView({
     }
   }, [supabase, channel.id, toast])
 
-  // Set up polling for new messages instead of real-time subscriptions
+  // Set up polling for new messages and sentiment analysis
   useEffect(() => {
     fetchMessages()
 
     // Set up polling interval (every 10 seconds)
     refreshIntervalRef.current = setInterval(() => {
       fetchMessages()
-    }, 100000)
+    }, 60000)
+
+    // Set up sentiment analysis interval (every 60 seconds)
+    sentimentAnalysisIntervalRef.current = setInterval(() => {
+      runAutomaticSentimentAnalysis()
+    }, 10000)
 
     return () => {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current)
+      }
+      if (sentimentAnalysisIntervalRef.current) {
+        clearInterval(sentimentAnalysisIntervalRef.current)
       }
     }
   }, [fetchMessages])
@@ -454,7 +514,7 @@ export default function ChannelView({
 
         // Update file attachment with real ID
         setFileAttachments((prev) =>
-          prev.map((f) => (f.id === attachmentData[0].id ? { ...f, id: attachmentData[0].id, url: publicUrl } : f)),
+          prev.map((f) => (f.id === fileId ? { ...f, id: attachmentData[0].id, url: publicUrl } : f)),
         )
 
         // If it's a text file, read and analyze it
@@ -474,7 +534,7 @@ export default function ChannelView({
 
             // Analyze file content
             try {
-              await analyzeFileWithGemini(attachmentData[0].id, content, file.name)
+              await analyzeFileWithAI(attachmentData[0].id, content, file.name)
             } catch (error) {
               console.error("Error analyzing file:", error)
             }
@@ -522,7 +582,7 @@ export default function ChannelView({
         description: "Please wait while we process your request",
       })
 
-      const simplified = await simplifyTextWithGemini(content)
+      const simplified = await simplifyTextWithAI(content)
       setSimplifiedMessages((prev) => ({
         ...prev,
         [messageId]: simplified,
@@ -544,7 +604,7 @@ export default function ChannelView({
         description: "Please wait while we analyze the conversation",
       })
 
-      const summary = await summarizeConversationWithGemini(messages)
+      const summary = await summarizeConversationWithAI(messages)
       setConversationSummary(summary)
       setShowSummaryDialog(true)
     } catch (error) {
@@ -565,7 +625,7 @@ export default function ChannelView({
         description: "Please wait while we process your request",
       })
 
-      await analyzeSentimentWithGemini(messageId, content)
+      await analyzeSentimentWithAI(messageId, content)
 
       toast({
         title: "Sentiment analyzed",
@@ -681,6 +741,15 @@ export default function ChannelView({
     return fileAttachments.filter((file) => file.id.includes(messageId))
   }
 
+  // Run sentiment analysis manually for testing
+  const runManualSentimentAnalysis = () => {
+    runAutomaticSentimentAnalysis()
+    toast({
+      title: "Sentiment Analysis",
+      description: "Running sentiment analysis on all messages",
+    })
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="border-b p-4">
@@ -724,6 +793,29 @@ export default function ChannelView({
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={runManualSentimentAnalysis}
+                    disabled={autoAnalysisRunning}
+                  >
+                    {autoAnalysisRunning ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                    )}
+                    Analyze
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Run sentiment analysis now</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleSummarizeConversation}
                     disabled={summarizing || messages.length === 0}
                   >
@@ -743,6 +835,10 @@ export default function ChannelView({
           </div>
         </div>
         {channel.description && <p className="text-sm text-muted-foreground">{channel.description}</p>}
+        <div className="mt-2 text-xs text-muted-foreground flex items-center">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Sentiment analysis runs automatically every minute
+        </div>
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col">
@@ -767,6 +863,7 @@ export default function ChannelView({
                 const sentiment = messageSentiments[msg.id]
                 const displayName = profile?.username || profile?.full_name || profile?.email || "Unknown User"
                 const messageAttachments = getMessageAttachments(msg.id)
+                const wordCount = msg.content.split(/\s+/).length
 
                 return (
                   <div key={msg.id} className="flex items-start gap-3 group relative">
@@ -788,6 +885,12 @@ export default function ChannelView({
                         {sentiment && (
                           <Badge variant="outline" className="ml-2 flex items-center gap-1">
                             {getSentimentIcon(sentiment)}
+                            <span className="ml-1 capitalize">{sentiment}</span>
+                          </Badge>
+                        )}
+                        {wordCount > 5 && !simplifiedMessages[msg.id] && (
+                          <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-200">
+                            Technical
                           </Badge>
                         )}
                       </div>
@@ -830,7 +933,7 @@ export default function ChannelView({
                                         </DialogHeader>
                                         <div className="mt-4">
                                           <Button
-                                            onClick={() => analyzeFileWithGemini(file.id, file.content!, file.name)}
+                                            onClick={() => analyzeFileWithAI(file.id, file.content!, file.name)}
                                             className="w-full"
                                           >
                                             Analyze Content
