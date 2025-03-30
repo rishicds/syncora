@@ -8,6 +8,8 @@ import ChannelView from "./channel-view"
 import GroupSettings from "./group-settings"
 import GroupMembers from "./group-members"
 import { hasPermission } from "@/lib/permissions"
+import { Menu, X } from "lucide-react"
+import { Button } from "../ui/button"
 
 export default function GroupView({
   group,
@@ -26,6 +28,7 @@ export default function GroupView({
   const [activeTab, setActiveTab] = useState("channels")
   const [loading, setLoading] = useState(true)
   const [members, setMembers] = useState<any[]>([])
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const userRoles = roles.filter((role) => userRoleIds.includes(role.id))
   const canManageChannels = hasPermission(userRoles, "manage_channels")
@@ -118,35 +121,76 @@ export default function GroupView({
       )
       .subscribe()
 
+    // Handle responsive layout
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false)
+      } else {
+        setSidebarOpen(true)
+      }
+    }
+
+    // Set initial state based on window size
+    handleResize()
+
+    // Add event listener for window resize
+    window.addEventListener('resize', handleResize)
+
     return () => {
       supabase.removeChannel(channelsSubscription)
       supabase.removeChannel(membersSubscription)
+      window.removeEventListener('resize', handleResize)
     }
   }, [supabase, group, selectedChannel])
 
   const handleChannelSelect = (channel: any) => {
     setSelectedChannel(channel)
+    // Auto-close sidebar on mobile after selection
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false)
+    }
+  }
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen)
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b p-4">
-        <h1 className="text-2xl font-bold">{group.name}</h1>
-        <p className="text-muted-foreground">{group.description}</p>
+      <div className="border-b p-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold truncate">{group.name}</h1>
+          <p className="text-sm text-muted-foreground truncate max-w-md">{group.description}</p>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={toggleSidebar}
+          className="md:hidden"
+        >
+          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </Button>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-64 border-r flex flex-col">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Sidebar with overlay on mobile */}
+        <div 
+          className={`${
+            sidebarOpen 
+              ? "absolute md:relative inset-0 z-10 md:z-auto bg-background md:w-64 md:flex" 
+              : "hidden md:block md:w-64"
+          } border-r flex flex-col overflow-hidden`}
+        >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full">
-              <TabsTrigger value="channels" className="flex-1">
+              <TabsTrigger value="channels" className="flex-1 text-xs md:text-sm">
                 Channels
               </TabsTrigger>
-              <TabsTrigger value="members" className="flex-1">
+              <TabsTrigger value="members" className="flex-1 text-xs md:text-sm">
                 Members
               </TabsTrigger>
               {(isOwner || canManageRoles || canManageChannels) && (
-                <TabsTrigger value="settings" className="flex-1">
+                <TabsTrigger value="settings" className="flex-1 text-xs md:text-sm">
                   Settings
                 </TabsTrigger>
               )}
@@ -182,9 +226,24 @@ export default function GroupView({
           </Tabs>
         </div>
 
+        {/* Main content area */}
         <div className="flex-1 overflow-hidden">
+          {!sidebarOpen && selectedChannel && (
+            <div className="p-2 border-b flex items-center">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleSidebar}
+                className="mr-2 md:hidden"
+              >
+                <Menu size={18} />
+              </Button>
+              <span className="font-medium truncate">{selectedChannel.name}</span>
+            </div>
+          )}
+          
           {selectedChannel ? (
-            <ChannelView channel={selectedChannel} user={user} userRoles={userRoles} />
+            <ChannelView channel={selectedChannel} user={user} userRoles={userRoles} group={undefined} roles={[]} members={[]} canManageMembers={false} isOwner={false} />
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground">Select a channel to start chatting</p>
@@ -195,4 +254,3 @@ export default function GroupView({
     </div>
   )
 }
-
