@@ -11,6 +11,7 @@ import { Input } from "../ui/input"
 import { Textarea } from "../ui/textarea"
 import { ScrollArea } from "../ui/scroll-area"
 import { Separator } from "../ui/separator"
+import ResizableDivider from "../resizable-divider"
 import { Loader2, Plus, Trash2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card"
@@ -35,6 +36,8 @@ export default function GroupSettings({
   const [isEditRoleOpen, setIsEditRoleOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [groupInfoHeight, setGroupInfoHeight] = useState(250) // Default height for group info section
+  const [rolesHeight, setRolesHeight] = useState(400) // Default height for roles section
 
   // Group form state
   const [groupName, setGroupName] = useState(group.name)
@@ -242,16 +245,26 @@ export default function GroupSettings({
     setEditingRole(null)
   }
 
+  const handleGroupInfoResize = (delta: number) => {
+    const newHeight = Math.max(150, Math.min(groupInfoHeight + delta, window.innerHeight * 0.6))
+    setGroupInfoHeight(newHeight)
+  }
+
+  const handleRolesResize = (delta: number) => {
+    const newHeight = Math.max(200, rolesHeight + delta)
+    setRolesHeight(newHeight)
+  }
+
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-[calc(100vh-4rem)]">
       <div className="p-4 space-y-6">
-        <div>
+        <div style={{ height: `${groupInfoHeight}px` }} className="overflow-hidden flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Group Settings</h3>
             {isOwner && <Button onClick={() => setIsEditGroupOpen(true)}>Edit Group</Button>}
           </div>
 
-          <Card>
+          <Card className="flex-1 overflow-auto">
             <CardHeader>
               <CardTitle>{group.name}</CardTitle>
               <CardDescription>{group.description || "No description provided"}</CardDescription>
@@ -271,9 +284,11 @@ export default function GroupSettings({
           </Card>
         </div>
 
+        <ResizableDivider onResize={handleGroupInfoResize} direction="vertical" className="mx-auto w-1/3" />
+
         <Separator />
 
-        <div>
+        <div style={{ height: `${rolesHeight}px` }} className="overflow-hidden flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Roles</h3>
             {canManageRoles && (
@@ -289,64 +304,73 @@ export default function GroupSettings({
             )}
           </div>
 
-          <div className="space-y-4">
-            {roles.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No roles found</p>
-            ) : (
-              roles
-                .sort((a, b) => a.position - b.position)
-                .map((role) => (
-                  <Card key={role.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge style={{ backgroundColor: role.color }}>{role.name}</Badge>
-                          {role.is_default && <Badge variant="outline">Default</Badge>}
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-4 pb-2">
+              {roles.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">No roles found</p>
+              ) : (
+                roles
+                  .sort((a, b) => a.position - b.position)
+                  .map((role) => (
+                    <Card key={role.id}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge style={{ backgroundColor: role.color }}>{role.name}</Badge>
+                            {role.is_default && <Badge variant="outline">Default</Badge>}
+                          </div>
+                          {canManageRoles && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteRole(role)}
+                              className="h-8 w-8"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
-                        {canManageRoles && (
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-sm space-y-1">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <span className="text-muted-foreground">Manage Channels:</span>
+                            <span>{role.permissions.manage_channels ? "Yes" : "No"}</span>
+
+                            <span className="text-muted-foreground">Manage Roles:</span>
+                            <span>{role.permissions.manage_roles ? "Yes" : "No"}</span>
+
+                            <span className="text-muted-foreground">Manage Members:</span>
+                            <span>{role.permissions.manage_members ? "Yes" : "No"}</span>
+
+                            <span className="text-muted-foreground">Send Messages:</span>
+                            <span>{role.permissions.send_messages ? "Yes" : "No"}</span>
+
+                            <span className="text-muted-foreground">Read Messages:</span>
+                            <span>{role.permissions.read_messages ? "Yes" : "No"}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      {canManageRoles && (
+                        <CardFooter>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteRole(role)}
-                            className="h-8 w-8"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => openEditRoleDialog(role)}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            Edit Role
                           </Button>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm space-y-1">
-                        <div className="grid grid-cols-2 gap-2">
-                          <span className="text-muted-foreground">Manage Channels:</span>
-                          <span>{role.permissions.manage_channels ? "Yes" : "No"}</span>
-
-                          <span className="text-muted-foreground">Manage Roles:</span>
-                          <span>{role.permissions.manage_roles ? "Yes" : "No"}</span>
-
-                          <span className="text-muted-foreground">Manage Members:</span>
-                          <span>{role.permissions.manage_members ? "Yes" : "No"}</span>
-
-                          <span className="text-muted-foreground">Send Messages:</span>
-                          <span>{role.permissions.send_messages ? "Yes" : "No"}</span>
-
-                          <span className="text-muted-foreground">Read Messages:</span>
-                          <span>{role.permissions.read_messages ? "Yes" : "No"}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                    {canManageRoles && (
-                      <CardFooter>
-                        <Button variant="outline" size="sm" className="w-full" onClick={() => openEditRoleDialog(role)}>
-                          Edit Role
-                        </Button>
-                      </CardFooter>
-                    )}
-                  </Card>
-                ))
-            )}
-          </div>
+                        </CardFooter>
+                      )}
+                    </Card>
+                  ))
+              )}
+            </div>
+          </ScrollArea>
         </div>
+
+        <ResizableDivider onResize={handleRolesResize} direction="vertical" className="mx-auto w-1/3" />
       </div>
 
       {/* Edit Group Dialog */}

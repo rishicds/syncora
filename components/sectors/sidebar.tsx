@@ -34,7 +34,7 @@ export default function Sidebar({
   return (
     <div className="w-64 border-r flex flex-col h-full">
       <div className="p-4 border-b flex items-center justify-between">
-        <h1 className="font-bold text-xl">Group Chat</h1>
+        <h1 className="font-bold text-xl">SECTORS</h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 rounded-full">
@@ -61,7 +61,7 @@ export default function Sidebar({
 
       <ScrollArea className="flex-1">
         <div className="p-2">
-          <h2 className="text-sm font-semibold mb-2 px-2">Your Groups</h2>
+          <h2 className="text-sm font-semibold mb-2 px-2">YOUR SECTORS</h2>
           <div className="space-y-1">
             {groups.map((group) => (
               <Button

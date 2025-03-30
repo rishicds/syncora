@@ -332,13 +332,17 @@ export default function Home() {
                     </span>
                   </motion.div>
                   <h1 className="space-y-4 text-4xl font-bold tracking-tight sm:text-6xl xl:text-7xl/none">
+                 
                     <AnimatedText text="Structured" className="block" delay={0.1} />
                     <AnimatedText text="Collaboration for" className="block" delay={0.2} />
+                    <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-transparent bg-clip-text">
                     <AnimatedText
                       text="Modern Teams"
-                      className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent"
+                      className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-transparent bg-clip-text"
                       delay={0.3}
+                      
                     />
+                    </span>
                   </h1>
                   <motion.p
                     className="max-w-[600px] text-xl text-muted-foreground"
@@ -487,7 +491,7 @@ export default function Home() {
                 Core Features
               </motion.div>
               <div className="space-y-2">
-                <h2 className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-4xl font-bold tracking-tighter text-transparent sm:text-5xl">
+                <h2 className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-4xl font-bold tracking-tighter text-transparent sm:text-5xl text-blue-200">
                   Everything You Need to Collaborate
                 </h2>
                 <p className="mx-auto max-w-[900px] text-xl text-muted-foreground">
@@ -558,9 +562,9 @@ export default function Home() {
                   AI-Powered
                 </motion.div>
                 <div className="space-y-4">
-                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-blue-300">
                     <span className="block">Bridge the Gap Between</span>
-                    <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                    <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent text-blue-200">
                       Technical and Non-Technical Teams
                     </span>
                   </h2>
@@ -733,7 +737,7 @@ export default function Home() {
                 Team Management
               </motion.div>
               <div className="space-y-2">
-                <h2 className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-4xl font-bold tracking-tighter text-transparent sm:text-5xl">
+                <h2 className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-4xl font-bold tracking-tighter text-blue-200 sm:text-5xl">
                   Organize Your Workspace
                 </h2>
                 <p className="mx-auto max-w-[900px] text-xl text-muted-foreground">
@@ -880,11 +884,11 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <div className="space-y-4">
-                <h2 className="text-3xl font-bold tracking-tighter text-primary-foreground sm:text-4xl md:text-5xl">
+              <div className="space-y-4 ">
+                <h2 className="text-3xl font-bold tracking-tighter text-blue-200 sm:text-4xl md:text-5xl">
                   Ready to Transform Your Team Communication?
                 </h2>
-                <p className="mx-auto max-w-[700px] text-xl text-primary-foreground/90">
+                <p className="mx-auto max-w-[700px] text-xl text-white">
                   Join thousands of teams already using our platform to collaborate more effectively.
                 </p>
               </div>
@@ -904,7 +908,7 @@ export default function Home() {
                 <AnimatedButton
                   size="lg"
                   variant="outline"
-                  className="border-primary-foreground/20 hover:bg-primary-foreground/10 text-primary-foreground"
+                  className="border-blue-500 hover:black text-white"
                   href="/login"
                 >
                   Login
