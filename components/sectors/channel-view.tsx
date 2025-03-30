@@ -358,7 +358,7 @@ export default function ChannelView({
     // Set up sentiment analysis interval (every 60 seconds)
     sentimentAnalysisIntervalRef.current = setInterval(() => {
       runAutomaticSentimentAnalysis()
-    }, 10000)
+    }, 8000)
 
     return () => {
       if (refreshIntervalRef.current) {
