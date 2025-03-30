@@ -121,6 +121,40 @@ export function ChatInterface({ conversation, messages: initialMessages, current
           }
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversation.id}`,
+        },
+        async (payload) => {
+          // Fetch the complete message with profile info
+          const { data } = await supabase.from("messages").select("*, profiles(*)").eq("id", payload.new.id).single()
+
+          if (data) {
+            setMessages((prev) => [...prev, data])
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversation.id}`,
+        },
+        async (payload) => {
+          // Fetch the complete message with profile info
+          const { data } = await supabase.from("messages").select("*, profiles(*)").eq("id", payload.old.id).single()
+
+          if (data) {
+            setMessages((prev) => prev.filter((m) => m.id !== data.id))
+          }
+        },
+      )
       .subscribe()
 
     return () => {
@@ -155,7 +189,7 @@ export function ChatInterface({ conversation, messages: initialMessages, current
           sender_id: currentUser.id,
           content: newMessage,
         })
-        .select()
+        .select("*, profiles(*)")
 
       if (error) throw error
 
@@ -167,6 +201,11 @@ export function ChatInterface({ conversation, messages: initialMessages, current
           updated_at: new Date().toISOString(),
         })
         .eq("id", conversation.id)
+
+      // Add the sent message to the local state immediately
+      if (data && data[0]) {
+        setMessages((prev) => [...prev, data[0]])
+      }
 
       setNewMessage("")
     } catch (error: any) {
