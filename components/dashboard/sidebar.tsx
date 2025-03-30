@@ -3,7 +3,22 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, MessageSquare, Search, Settings, User, Bell, FileText, Hash, Plus, Mic, Megaphone, Loader2, Sparkles } from "lucide-react"
+import { 
+  Home, 
+  MessageSquare, 
+  Search, 
+  Settings, 
+  User, 
+  Bell, 
+  FileText, 
+  Hash, 
+  Plus, 
+  Mic, 
+  Megaphone, 
+  Loader2, 
+  Sparkles,
+  GitPullRequestDraft 
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSupabase } from "@/components/supabase-provider"
 import { type Group, CHANNEL_TYPES } from "@/types/group.types"
@@ -30,16 +45,12 @@ export function DashboardSidebar() {
     { title: "Messages", icon: MessageSquare, href: "/dashboard/messages", active: pathname.startsWith("/dashboard/messages") && !pathname.includes("/groups") },
     { title: "Search", icon: Search, href: "/dashboard/search", active: pathname === "/dashboard/search" },
     { title: "Notifications", icon: Bell, href: "/dashboard/notifications", active: pathname === "/dashboard/notifications", badge: unreadNotifications },
-   
     { title: "Profile", icon: User, href: "/dashboard/profile", active: pathname === "/dashboard/profile" },
     { title: "Settings", icon: Settings, href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
-    { title: "Sectors", icon: Settings, href: "/sectors", active: pathname === "/sectors" },
+    { title: "Sectors", icon: GitPullRequestDraft, href: "/sectors", active: pathname === "/sectors" || pathname.startsWith("/sectors/") },
   ]
 
-  // Fetch groups and notifications
-  
-  // Get appropriate channel icon
- 
+  // Rest of your component code...
 
   return (
     <>
@@ -87,11 +98,7 @@ export function DashboardSidebar() {
           </div>
 
           {/* Groups section */}
-         
-
-           
-            
-          
+          {/* ... */}
         </nav>
 
         {/* Footer */}
@@ -99,7 +106,7 @@ export function DashboardSidebar() {
           <p className="text-xs text-gray-400">
             <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text font-bold text-transparent">
               Syncora
-            </span> v0.2.0
+            </span>v0.2.0
           </p>
         </footer>
       </aside>

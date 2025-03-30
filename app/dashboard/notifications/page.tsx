@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import { Bell, Check, X, ExternalLink, RefreshCw } from 'lucide-react';
+//import { image1.png } from 'notifications';
 
 // Define types for our data structure
 interface Sender {
@@ -61,9 +62,9 @@ const NotificationPage: React.FC = () => {
             created_at: '2025-03-29T14:30:00Z',
             sender: {
               id: 'user123',
-              username: 'designgod',
+              username: 'Pragya',
               full_name: 'Alex Morgan',
-              avatar_url: '/api/placeholder/40/40',
+              avatar_url: 'https://img.freepik.com/free-psd/3d-illustration-with-online-avatar_23-2151303097.jpg?ga=GA1.1.919737960.1739809844&semt=ais_hybrid',
             }
           },
           {
@@ -76,9 +77,9 @@ const NotificationPage: React.FC = () => {
             created_at: '2025-03-28T09:15:00Z',
             sender: {
               id: 'user456',
-              username: 'pixelperfect',
+              username: 'Swastik',
               full_name: 'Jamie Chen',
-              avatar_url: '/api/placeholder/40/40',
+              avatar_url: 'https://img.freepik.com/free-vector/mysterious-mafia-man-smoking-cigarette_52683-34828.jpg?ga=GA1.1.919737960.1739809844&semt=ais_hybrid',
             }
           },
           {
@@ -91,9 +92,9 @@ const NotificationPage: React.FC = () => {
             created_at: '2025-03-27T16:45:00Z',
             sender: {
               id: 'user789',
-              username: 'aestheticfreak',
+              username: 'Nirjhar',
               full_name: 'Robin Taylor',
-              avatar_url: '/api/placeholder/40/40',
+              avatar_url: 'https://img.freepik.com/free-vector/young-man-glasses-hoodie_1308-174658.jpg?ga=GA1.1.919737960.1739809844&semt=ais_hybrid',
             }
           },
           {
@@ -106,9 +107,9 @@ const NotificationPage: React.FC = () => {
             created_at: '2025-03-29T18:20:00Z',
             sender: {
               id: 'user101',
-              username: 'systemnotic',
+              username: 'Rishi',
               full_name: 'System',
-              avatar_url: '/api/placeholder/40/40',
+              avatar_url: 'https://img.freepik.com/premium-vector/simple-cute-black-boy-ith-beard-icon-vector_960391-425.jpg?ga=GA1.1.919737960.1739809844&semt=ais_hybrid',
             }
           }
         ];
