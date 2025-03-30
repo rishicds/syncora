@@ -49,7 +49,7 @@ export default function SectorDashboard({
         <div className="p-4">
           <Button onClick={() => setIsCreateGroupOpen(true)} className="w-full flex items-center gap-2">
             <PlusIcon size={16} />
-            Create Group
+            Create Sector
           </Button>
         </div>
       </Sidebar>
@@ -65,9 +65,9 @@ export default function SectorDashboard({
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4">Welcome to Group Chat</h2>
-              <p className="text-muted-foreground mb-6">Select a group or create a new one to get started</p>
-              <Button onClick={() => setIsCreateGroupOpen(true)}>Create Your First Group</Button>
+              <h2 className="text-2xl font-bold mb-4">Welcome to Sectors</h2>
+              <p className="text-muted-foreground mb-6">Select a sector or create a new one to get started</p>
+              <Button onClick={() => setIsCreateGroupOpen(true)}>Create Your First Sector</Button>
             </div>
           </div>
         )}

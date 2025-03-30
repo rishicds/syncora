@@ -86,72 +86,11 @@ export function DashboardSidebar() {
           </div>
 
           {/* Groups section */}
-          <div className="mt-8">
-            <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Groups</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 rounded-lg bg-white/5 p-0 hover:bg-primary/10 hover:text-primary"
-                onClick={() => setShowCreateGroup(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+         
 
-            {loading ? (
-              <div className="space-y-2 py-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-3 py-2">
-                    <div className="h-8 w-8 rounded-lg bg-gray-700/50 animate-pulse" />
-                    <div className="h-4 flex-1 rounded bg-gray-700/50 animate-pulse" />
-                  </div>
-                ))}
-              </div>
-            ) : groups.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-400">No groups yet</div>
-            ) : (
-              <div className="space-y-2 py-2">
-                {groups.map(group => (
-                  <div key={group.id} className="group">
-                    <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-white/5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/20 text-secondary">
-                        {group.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-sm font-medium text-gray-300">{group.name}</span>
-                    </div>
-                    
-                    <div className="ml-12 mt-1 space-y-1">
-                      {group.channels?.length ? (
-                        group.channels.map(channel => (
-                          <Link
-                            key={channel.id}
-                            href={`/dashboard/groups/${group.id}/channels/${channel.id}`}
-                            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all ${
-                              pathname === `/dashboard/groups/${group.id}/channels/${channel.id}`
-                                ? "bg-primary/10 text-primary"
-                                : "text-gray-400 hover:bg-white/5 hover:text-white"
-                            }`}
-                          >
-                            <div className="flex h-5 w-5 items-center justify-center rounded-md bg-white/5">
-                              
-                            </div>
-                            <span>{channel.name}</span>
-                          </Link>
-                        ))
-                      ) : (
-                        <div className="px-3 py-1 text-xs text-gray-500">No channels</div>
-                      )}
-
-                     
-                        
-                    
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+           
+            
+          
         </nav>
 
         {/* Footer */}
