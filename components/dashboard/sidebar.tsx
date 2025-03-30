@@ -7,8 +7,6 @@ import { Home, MessageSquare, Search, Settings, User, Bell, FileText, Hash, Plus
 import { Button } from "@/components/ui/button"
 import { useSupabase } from "@/components/supabase-provider"
 import { type Group, CHANNEL_TYPES } from "@/types/group.types"
-import { CreateGroupDialog } from "@/components/groups/create-group-dialog"
-import { CreateChannelDialog } from "@/components/groups/create-channel-dialog"
 import { hasPermission } from "@/lib/permissions"
 import { Badge } from "@/components/ui/badge"
 import { getUnreadNotificationCount } from "@/lib/notification-service"
@@ -38,69 +36,9 @@ export function DashboardSidebar() {
   ]
 
   // Fetch groups and notifications
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        // Fetch groups
-        const { data: groupsData } = await supabase
-          .from("groups")
-          .select("*, channels(*), group_members!inner(role_ids), roles(*)")
-          .eq("group_members.user_id", user.id)
-
-        setGroups(groupsData || [])
-
-        // Fetch notifications
-        const count = await getUnreadNotificationCount(user.id)
-        setUnreadNotifications(count)
-      } catch (error) {
-        toast({
-          title: "Error loading data",
-          description: handleError(error).message,
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-
-    // Real-time subscription for notifications
-    const channel = supabase
-      .channel('notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-          if (user) getUnreadNotificationCount(user.id).then(setUnreadNotifications)
-        })
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [supabase, toast])
-
-  // Check channel creation permissions
-  const canCreateChannel = (group: Group): boolean => {
-    if (!group.roles || !group.group_members?.[0]?.role_ids) return false
-    
-    return group.roles
-      .filter(role => group.group_members[0].role_ids.includes(role.id))
-      .some(role => hasPermission(role.permissions, "MANAGE_CHANNELS"))
-  }
-
+  
   // Get appropriate channel icon
-  const getChannelIcon = (type: string) => {
-    switch (type) {
-      case CHANNEL_TYPES.TEXT: return <Hash className="h-4 w-4" />
-      case CHANNEL_TYPES.VOICE: return <Mic className="h-4 w-4" />
-      case CHANNEL_TYPES.ANNOUNCEMENT: return <Megaphone className="h-4 w-4" />
-      default: return <Hash className="h-4 w-4" />
-    }
-  }
+ 
 
   return (
     <>
@@ -196,7 +134,7 @@ export function DashboardSidebar() {
                             }`}
                           >
                             <div className="flex h-5 w-5 items-center justify-center rounded-md bg-white/5">
-                              {getChannelIcon(channel.type)}
+                              
                             </div>
                             <span>{channel.name}</span>
                           </Link>
@@ -205,20 +143,9 @@ export function DashboardSidebar() {
                         <div className="px-3 py-1 text-xs text-gray-500">No channels</div>
                       )}
 
-                      {canCreateChannel(group) && (
-                        <button
-                          onClick={() => {
-                            setSelectedGroupId(group.id)
-                            setShowCreateChannel(true)
-                          }}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white"
-                        >
-                          <div className="flex h-5 w-5 items-center justify-center rounded-md bg-white/5">
-                            <Plus className="h-3 w-3" />
-                          </div>
-                          <span>Add Channel</span>
-                        </button>
-                      )}
+                     
+                        
+                    
                     </div>
                   </div>
                 ))}
@@ -236,30 +163,6 @@ export function DashboardSidebar() {
           </p>
         </footer>
       </aside>
-
-      {/* Dialogs */}
-      <CreateGroupDialog
-        open={showCreateGroup}
-        onOpenChange={setShowCreateGroup}
-        onGroupCreated={(newGroup) => {
-          setGroups(prev => [...prev, newGroup])
-        }}
-      />
-
-      {selectedGroupId && (
-        <CreateChannelDialog
-          open={showCreateChannel}
-          onOpenChange={setShowCreateChannel}
-          groupId={selectedGroupId}
-          onChannelCreated={(newChannel) => {
-            setGroups(prev => prev.map(group => 
-              group.id === selectedGroupId 
-                ? { ...group, channels: [...(group.channels || []), newChannel] } 
-                : group
-            ))
-          }}
-        />
-      )}
     </>
   )
 }
