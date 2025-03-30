@@ -30,7 +30,7 @@ export function DashboardSidebar() {
     { title: "Messages", icon: MessageSquare, href: "/dashboard/messages", active: pathname.startsWith("/dashboard/messages") && !pathname.includes("/groups") },
     { title: "Search", icon: Search, href: "/dashboard/search", active: pathname === "/dashboard/search" },
     { title: "Notifications", icon: Bell, href: "/dashboard/notifications", active: pathname === "/dashboard/notifications", badge: unreadNotifications },
-    { title: "Files", icon: FileText, href: "/dashboard/files", active: pathname === "/dashboard/files" },
+   
     { title: "Profile", icon: User, href: "/dashboard/profile", active: pathname === "/dashboard/profile" },
     { title: "Settings", icon: Settings, href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
   ]
