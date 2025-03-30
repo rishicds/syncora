@@ -265,7 +265,7 @@ export default function Home() {
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
             <motion.div whileHover={{ rotate: [0, -10, 10, -10, 0] }} transition={{ duration: 0.5 }}>
-              <MessageSquare className="h-6 w-6 text-primary" />
+             <img src="./logo.svg" className="h-10 w-auto"/>
             </motion.div>
             <motion.h1
               className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-xl font-bold text-transparent"

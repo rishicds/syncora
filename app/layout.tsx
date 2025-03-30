@@ -11,7 +11,11 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Syncora - Structured Collaboration Platform",
   description: "A modern platform for team collaboration with AI-powered features",
-    generator: 'v0.dev'
+    generator: 'v0.dev',
+    icons: {
+      icon: "/logo.svg",
+      
+    },
 }
 
 export default function RootLayout({
