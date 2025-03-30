@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { MessageSquare, Plus, Users, ArrowRight, Sparkles, Zap, Mail } from "lucide-react"
 import { useState, useEffect } from "react"
 
+
+
 interface Conversation {
   id: string
   user1_id: string
@@ -110,7 +112,7 @@ export function DashboardOverview({ conversations }: DashboardOverviewProps) {
             <CardContent className="z-10 relative">
               <p className="text-sm text-zinc-400 mt-1 font-medium">Connect with team members and start collaborating instantly</p>
               <div className="mt-6">
-                <Button asChild size="lg" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl border-0 font-bold group">
+                <Button asChild size="lg" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl border-0 font-bold group mt-9">
                   <Link href="/dashboard/search" className="flex items-center">
                     Search Users
                     <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
@@ -123,7 +125,7 @@ export function DashboardOverview({ conversations }: DashboardOverviewProps) {
           <div className={`reveal reveal-delay-2 bg-zinc-900/50 h-full border border-zinc-800/50 relative backdrop-blur-lg transition-all duration-500 ease-out hover:translate-y-[-4px] rounded-3xl overflow-hidden`}>
             <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-transparent"></div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 z-10 relative">
-              <CardTitle className="text-lg font-bold text-zinc-100">Start Conversation</CardTitle>
+              <CardTitle className="text-lg font-bold text-zinc-100">Syncora Chat</CardTitle>
               <div className="icon-container relative">
                 <Plus className="h-5 w-5 text-pink-400" />
                 <span className="absolute inset-0 bg-pink-400/20 rounded-full blur-md opacity-50 animate-pulse-slow"></span>
@@ -132,9 +134,9 @@ export function DashboardOverview({ conversations }: DashboardOverviewProps) {
             <CardContent className="z-10 relative">
               <p className="text-sm text-zinc-400 mt-1 font-medium">Launch a new thread with any team member in your network</p>
               <div className="mt-6">
-                <Button asChild size="lg" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl border-0 font-bold group">
-                  <Link href="/dashboard/search" className="flex items-center">
-                    New Conversation
+                <Button asChild size="lg" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl border-0 font-bold group mt-9">
+                  <Link href="/sectors" className="flex items-center">
+                   Seamless Talks, Stronger Connections
                     <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
                   </Link>
                 </Button>
