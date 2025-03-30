@@ -33,6 +33,7 @@ export function DashboardSidebar() {
    
     { title: "Profile", icon: User, href: "/dashboard/profile", active: pathname === "/dashboard/profile" },
     { title: "Settings", icon: Settings, href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
+    { title: "Sectors", icon: Settings, href: "/sectors", active: pathname === "/sectors" },
   ]
 
   // Fetch groups and notifications
