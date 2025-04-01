@@ -300,16 +300,7 @@ export default function Home() {
               <AnimatedButton variant="ghost" href="/login">
                 Login
               </AnimatedButton>
-              <AnimatedButton href="/signup" className="group">
-                <span>Sign Up</span>
-                <motion.span
-                  initial={{ x: 0, opacity: 0.8 }}
-                  whileHover={{ x: 4, opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </motion.span>
-              </AnimatedButton>
+              
             </div>
           </div>
         </div>
